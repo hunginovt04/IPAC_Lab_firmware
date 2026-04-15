@@ -38,7 +38,22 @@ extern PubSubClient mqtt_client;
 /*#############################################################################################################*/
 
 // Variable for system mode
-int mode_of_system = DEFAULT_MODE;
+ModeSystem mode_of_system;
+ModeSystem get_mode()
+{
+    if (is_sw2_on())
+    {
+        return is_sw1_on() ? TRAINING_MODE : DEFAULT_MODE;
+    }
+    else
+    {
+        return is_sw1_on() ? REALITY_MODE : DEFAULT_MODE;
+    }
+}
+void run_default_mode(void);
+void run_training_mode(void);
+void run_reality_mode(void);
+
 bool change_mode = false;
 
 // Variables for debugging
@@ -173,45 +188,13 @@ void loop()
     mqtt_client.loop();
     //   Handle system mode
     /*#########################################################################################################*/
-    if (is_sw2_on()) // Training mode
-    {
-        if (is_sw1_on())
-        {
-            if (mode_of_system != TRAINING_MODE)
-            {
-                mode_of_system = TRAINING_MODE;
-                change_mode = true;
-            }
-        }
-        else
-        {
-            if (mode_of_system != DEFAULT_MODE)
-            {
-                mode_of_system = DEFAULT_MODE;
-                change_mode = true;
-            }
-        }
-    }
-    else // Reality mode
-    {
-        if (is_sw1_on())
-        {
-            if (mode_of_system != REALITY_MODE)
-            {
-                mode_of_system = REALITY_MODE;
-                change_mode = true;
-            }
-        }
-        else
-        {
-            if (mode_of_system != DEFAULT_MODE)
-            {
-                mode_of_system = DEFAULT_MODE;
-                change_mode = true;
-            }
-        }
-    }
+    ModeSystem new_mode = get_mode();
 
+    if (new_mode != mode_of_system)
+    {
+        mode_of_system = new_mode;
+        change_mode = true;
+    }
     /*#########################################################################################################*/
 
     // Read Data
@@ -234,10 +217,36 @@ void loop()
 
     //  Create and send MQTT message
     /*#########################################################################################################*/
-
-    if (mode_of_system == DEFAULT_MODE)
+    switch (mode_of_system)
     {
-        if (change_mode)
+    case DEFAULT_MODE:
+        run_default_mode();
+        break;
+    case TRAINING_MODE:
+        run_training_mode();
+        break;
+    case REALITY_MODE:
+        run_reality_mode();
+        break;
+    }
+    /*#########################################################################################################*/
+
+    // Serial Monitor for debugging
+    /*#########################################################################################################*/
+    unsigned long currentMillis = millis();
+    if (currentMillis - last_debug_time >= DEBUG_INTERVAL)
+    {
+        last_debug_time = currentMillis;
+        print_RSSI_data(wifi_rssi_data, ble_rssi_data);
+        print_IMU_data(imu_data);
+        print_topic_and_message(message, mode_of_system);
+    }
+    /*#########################################################################################################*/
+}
+
+
+void run_default_mode(void){
+    if (change_mode)
         {
             change_mode = false;
             lcd_setup_outline(tft);
@@ -249,10 +258,9 @@ void loop()
             publish_message(device_info_topic, message);
         }
         lcd_display_default_mode(tft, wifi_rssi_data);
-    }
-    else if (mode_of_system == TRAINING_MODE)
-    {
-        if (change_mode)
+}
+void run_training_mode(void){
+    if (change_mode)
         {
             change_mode = false;
             lcd_setup_training_mode_outline(tft);
@@ -266,10 +274,9 @@ void loop()
         {
             lcd_display_training_mode(tft, wifi_rssi_data, imu_data);
         }
-    }
-    else if (mode_of_system == REALITY_MODE)
-    {
-        time_millis = millis();
+}
+void run_reality_mode(void){
+    time_millis = millis();
         read_valve_open_status(&valve_open_status, &mode_status);
         get_real_msg(wifi_rssi_data, ble_rssi_data, &imu_data, &valve_open_status, &mode_status, &message, &time_millis);
         if (is_ready_to_publish())
@@ -326,21 +333,4 @@ void loop()
         // Hiển thị thông tin
         lcd_setup_reality_text_outline(tft);
         lcd_update_reality_text_outline(tft, valve_open_status, user_data);
-    }
-
-    /*#########################################################################################################*/
-
-    // Serial Monitor for debugging
-    /*#########################################################################################################*/
-
-    unsigned long currentMillis = millis();
-    if (currentMillis - last_debug_time >= DEBUG_INTERVAL)
-    {
-        last_debug_time = currentMillis;
-        print_RSSI_data(wifi_rssi_data, ble_rssi_data);
-        print_IMU_data(imu_data);
-        print_topic_and_message(message, mode_of_system);
-    }
-
-    /*#########################################################################################################*/
 }

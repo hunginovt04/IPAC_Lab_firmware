@@ -22,9 +22,15 @@
 #define DEVICE_NAME "Fire steering"
 
 // Mode of system
-#define DEFAULT_MODE 0  // Default mode of system (Sending Information, Training/Reality Topic)
-#define TRAINING_MODE 1 // Training mode (Sending data and counter)
-#define REALITY_MODE 2  // Reality mode (Sending data and valve/mode of extinguish status)
+enum ModeSystem
+{
+    DEFAULT_MODE,  // Default mode of system (Sending Information, Training/Reality Topic)
+    TRAINING_MODE, // Training mode (Sending data)
+    REALITY_MODE   // Reality mode (Sending data and valve/mode of extinguish status)
+};
+// #define DEFAULT_MODE 0  // Default mode of system (Sending Information, Training/Reality Topic)
+// #define TRAINING_MODE 1 // Training mode (Sending data and counter)
+// #define REALITY_MODE 2  // Reality mode (Sending data and valve/mode of extinguish status)
 
 // Link youtube for turtorial
 #define YOUTUBE_LINK "https://www.youtube.com/watch?v=uHgt8giw1LY"
